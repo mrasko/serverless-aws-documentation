@@ -63,7 +63,9 @@ module.exports = {
 
   addModelDependencies: function addModelDependencies(models, resource) {
     Object.keys(models).forEach(contentType => {
-      resource.DependsOn.add(`${models[contentType]}Model`);
+      if (typeof models[contentType] !== 'object') {
+          resource.DependsOn.add(`${models[contentType]}Model`);
+      }
     });
   },
 
