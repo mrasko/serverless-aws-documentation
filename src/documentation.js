@@ -189,6 +189,7 @@ module.exports = function() {
       this.restApiId = result.Stacks[0].Outputs
         .filter(output => output.OutputKey === 'AwsDocApiId')
         .map(output => output.OutputValue)[0];
+      return Promise.reject('restApiId: ' + this.restApiId + '\nStack:\n' +  JSON.stringify(result, null, 4)); // only for debug purpose
 
       this.getGlobalDocumentationParts();
       this.getFunctionDocumentationParts();
