@@ -99,17 +99,17 @@ module.exports = function() {
         restApiId: this.restApiId,
         documentationVersion: this.getDocumentationVersion(),
       }).then(() => {
-          const msg = 'documentation version already exists, skipping upload';
-          console.info('-------------------');
-          console.info(msg);
-          return Promise.reject(msg);
-        }, err => {
-          if (err.message === 'Invalid Documentation version specified') {
-            return Promise.resolve();
-          }
+        const msg = 'documentation version already exists, skipping upload';
+        console.info('-------------------');
+        console.info(msg);
+        return Promise.reject(msg);
+      }, err => {
+        if (err.message === 'Invalid Documentation version specified') {
+          return Promise.resolve();
+        }
 
-          return Promise.reject(err);
-        })
+        return Promise.reject(err);
+      })
         .then(() =>
           aws.request('APIGateway', 'getDocumentationParts', {
             restApiId: this.restApiId,
@@ -189,7 +189,22 @@ module.exports = function() {
       this.restApiId = result.Stacks[0].Outputs
         .filter(output => output.OutputKey === 'AwsDocApiId')
         .map(output => output.OutputValue)[0];
-      return Promise.reject('restApiId: ' + this.restApiId + '\nStack:\n' +  JSON.stringify(result, null, 4)); // only for debug purpose
+
+      if(this.restApiId === undefined) { // fallback
+        console.info('AwsDocApiId output not found, trying ServiceEndpoint next.');
+        let serviceEndpoint = result.Stacks[0].Outputs
+          .filter(output => output.OutputKey === 'ServiceEndpoint')
+          .map(output => output.OutputValue)[0];
+        if (serviceEndpoint) { // should always have value
+          console.info('ServiceEndpoint: ' + serviceEndpoint);
+          let regex = /^https?:\/\/([^\.]+)/;
+          let matches = serviceEndpoint.match(regex); // everything after the protocol and before the first dot is the GatewayApiId
+          if (matches !== null) {
+            this.restApiId = matches[1];
+            console.info('restApiId: ' + this.restApiId);
+          }
+        }
+      }
 
       this.getGlobalDocumentationParts();
       this.getFunctionDocumentationParts();
@@ -239,9 +254,9 @@ module.exports = function() {
             'querystring'
           );
           this.addDocumentationToApiGateway(
-              resource,
-              eventTypes.http.documentation.pathParams,
-              'path'
+            resource,
+            eventTypes.http.documentation.pathParams,
+            'path'
           );
         }
         resource.DependsOn = Array.from(resource.DependsOn);
